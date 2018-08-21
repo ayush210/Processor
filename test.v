@@ -1,49 +1,33 @@
 module test;
 
-reg reset;
-reg clk;
-reg[4:0] fulladdress;
-reg[31:0] write_data;
-wire[31:0] read_data;
-reg  write_signal;
-reg read_signal;
-wire validbit;
-wire prevread;
-wire hit_miss;
+parameter memory_bits = 5;
 
-cachemem cache(.reset(reset),.clk(clk),.fulladdress(fulladdress),.write_data(write_data),.read_data(read_data),.write_signal(write_signal),.read_signal(read_signal),.match(hit_miss));
+reg [memory_bits-1:0] fulladdress;
+reg clk,reset;
+reg read_signal,write_signal;
+wire[3:0] state;
+reg [31:0] out_write;
+wire [31:0] out_read;
 
-always @(*)
+combined c(.clk(clk),.reset(reset),.fulladdress(fulladdress),.read_signal(read_signal),.write_signal(write_signal),.state(state),.out_write(out_write),.out_read(out_read));
+
+always@(*)
 		begin
-#5 clk <= ~clk;
+			#5 clk<=~clk;
 		end
 
 initial begin
-$monitor($time,"%d %d %d",fulladdress,read_data,hit_miss);
-clk = 0;reset = 1;
-#5 reset = 0;fulladdress = 1; write_data = 5; write_signal = 1;
-#10 fulladdress = 2; write_data = 6;
-#10 fulladdress = 1;write_signal = 0;read_signal = 1;
-#10 fulladdress = 2;write_signal = 0;read_signal = 1;
-//#10 fulladdress = 1; write_data = 6; write_signal = 1;
-//#10 fulladdress = 0; write_data = 5;write_signal = 1;read_signal = 0;
-//#10 fulladdress = 1; read_signal = 1; write_signal = 0;
-#10 fulladdress = 3;
-#10 fulladdress = 2;
-#10 fulladdress = 1;
-#10 fulladdress = 3;
-#10 fulladdress = 3;
-//#10 
-//#10 fulladdress = 0; 
-end
-
+$monitor($time,"%d %d",state,out_read);
+	clk = 0;
+#5 reset = 1;
+//#10 reset = 0;fulladdress = 12; write_signal = 1;out_write = 6; 
+//#20 fulladdress = 12; write_signal = 0;
+#10 reset = 0;read_signal = 1;fulladdress = 12;
+#20 read_signal = 0;
+//#20 read_signal = 1;fulladdress = 20;
+//#20 read_signal = 0;
+//#100 read_signal = 1;
+//#20 read_signal = 0;
+	end
 
 endmodule
-
-/*module test;
-reg clk;
-reg[4:0]fulladdress;
-reg[31:0] write_data;
-wire[31:0] read_data;
-
-endmodule*/
