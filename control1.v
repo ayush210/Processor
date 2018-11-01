@@ -5,14 +5,20 @@
 //branch address after stage 3 has to be added and connected to pc mux 
 //reset has to be added 
 // lui and auipc has to be considered seperately for hazards 
-module control(reset,ir2_output,ir3_output,ir4_output,ir5_output,branch_control_output,select_pc,select_pc2,select_ir2,select_ir3,select_ir4,select_pc3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_datawrite,select_z5,reg_write_enable,data_write_signal);
+module control(reset,ir2_output,ir3_output,ir4_output,ir5_output,branch_control_output,select_pc,select_pc2,select_ir2,select_ir3,select_ir4,select_pc3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_datawrite,select_z5,reg_write_enable,data_write_signal,select_z4,select_pc4);
 input branch_control_output;
 input[31:0] ir2_output,ir3_output,ir4_output,ir5_output; // instruction reg of each stage;
 output[1:0] select_pc,select_ir2,select_ir3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_z5;
-output select_pc2,select_pc3,select_datawrite,select_ir4,reg_write_enable,data_write_signal;
+output select_pc2,select_pc3,select_datawrite,reg_write_enable,data_write_signal;
+output[1:0] select_ir4;
+output select_z4;
+output select_pc4;
+reg select_z4;
 reg[1:0] select_pc,select_ir2,select_ir3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_z5;
-reg select_pc2,select_pc3,select_datawrite,select_ir4,output_reg_enable,reg_write_enable,data_write_signal;
+reg select_pc2,select_pc3,select_datawrite,output_reg_enable,reg_write_enable,data_write_signal;
 input reset;
+reg[1:0] select_ir4;
+reg select_pc4;
 always @(*)
 		begin
 if(reset==1)
@@ -54,6 +60,7 @@ else if(ir2_output[19:15] == ir3_output[11:7]&&(ir3_output[14:12] == 3'b010) && 
 		select_pc2 = 1; //pc2 = old pc2 stall
 		select_ir2 = 2; //stall 
 		select_ir3 = 1; //nop in stage 3
+		//select_z4 = 0;
 	end
 else if((ir2_output[19:15] == ir3_output[11:7])&&(ir3_output[6:0] == 7'b0000011) && (ir2_output[6:0] == 7'b1100111) && (ir3_output[14:12] == 3'b010) && (ir3_output[14:12] == 3'b000))   // Lw r’, imm(rs1)  Beq rs1,r’,imm
 	begin
@@ -266,5 +273,12 @@ else
 		reg_write_enable = 0;
 	end
 end
+
+//control for z4 mux
+select_z4 = 0;
+
+//control for pc4
+select_pc4 = 0;
+
 end
 endmodule
