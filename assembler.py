@@ -1,6 +1,6 @@
 from numpy import binary_repr
 k = open('machinecode.txt','w')
-with open('assemblycode.txt') as f:
+with open('assemblycode2.txt') as f:
 	a = f.readlines()
 #	print a
 	
