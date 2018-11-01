@@ -28,7 +28,7 @@ reg[31:0] r1_value,r2_value;
 				end
 		end
 		initial begin
-		$monitor("r0=%d r1=%d r2=%d r3=%d r4=%d r5=%d r6=%d r7=%d\n r8=%d r9=%d r10=%d r11=%d r12=%d r13=%d r14=%d r15=%d\n r16=%d r17=%d r18=%d r19=%d r20=%d r21=%d r22=%d r23=%d\n r24=%d r25=%d r26=%d r27=%d r28=%d r29=%d r30=%d r31=%d\n",registers[0],registers[1],registers[2],registers[3],registers[4],registers[5],registers[6],registers[7],registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23],registers[24],registers[25],registers[26],registers[27],registers[28],registers[29],registers[30],registers[31]);
+	//	$monitor("r0=%d r1=%d r2=%d r3=%d r4=%d r5=%d r6=%d r7=%d\n r8=%d r9=%d r10=%d r11=%d r12=%d r13=%d r14=%d r15=%d\n r16=%d r17=%d r18=%d r19=%d r20=%d r21=%d r22=%d r23=%d\n r24=%d r25=%d r26=%d r27=%d r28=%d r29=%d r30=%d r31=%d\n",registers[0],registers[1],registers[2],registers[3],registers[4],registers[5],registers[6],registers[7],registers[8],registers[9],registers[10],registers[11],registers[12],registers[13],registers[14],registers[15],registers[16],registers[17],registers[18],registers[19],registers[20],registers[21],registers[22],registers[23],registers[24],registers[25],registers[26],registers[27],registers[28],registers[29],registers[30],registers[31]);
 		end
 		
 endmodule
