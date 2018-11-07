@@ -1,5 +1,7 @@
 //module for complete processor testbench
-module processor(clk,reset,pc,instruction);
+module processor(clk,reset,pc,instruction,a_ready,d_ready);
+
+input a_ready,d_ready;
 input[31:0] instruction;
 output[31:0] pc;
 wire data_write_signal; //data memory write enable
@@ -19,8 +21,8 @@ wire[1:0] select_ir3,select_x3,select_y3,select_md3; //select lines
 wire select_pc3;  //select line for pc3
 wire[31:0] ir4_output,pc4_output,md4_output;
 wire[31:0] ir4_input,pc4_input,md4_input;
-wire select_pc4z4; //select lines 
 wire[1:0] select_ir4;
+wire select_pc4z4; //select lines 
 wire[1:0] select_operand1,select_operand2,select_md4; 
 wire[31:0] ir5_input,z5_input,z5_output,ir5_output;  
 wire[31:0] read_data,write_data; //data read to be written to data memory 
@@ -31,17 +33,12 @@ wire branch_control_output; //branch enable for branch has to be taken or not
 wire[31:0] branchaddress3_input,branchaddress3_output; //branch address from output of 2nd stage
 wire[5:0] alu_select_input,alu_select_output; //select line for alu 
 wire branch_control_input;
-wire select_z4;
-wire select_pc4;
 
-////new
-wire load_fifo_write_signal;
-wire store_fifo_write_signal;
-
-
-///////new
-wire read_store_fifo_signal;
-
+wire backpressureslave;
+wire a_ready;
+wire d_ready;
+wire select_ir5;
+wire[42:0] d_channel;
 //1st stage instantiated
 fetch_stage fetch(.z4(z4_output),.clk(clk),.reset(reset),.select_pc(select_pc),.select_ir2(select_ir2),.select_pc2(select_pc2),.instruction(instruction),.pc(pc),.branchaddress(branchaddress),.ir2_input(ir2_input),.pc2_input(pc2_input),.ir2_output(ir2_output),.pc2_output(pc2_output));
 
@@ -67,7 +64,7 @@ dff md3(.in(md3_input),.clk(clk),.out(md3_output),.reset(reset));
 dff2 aluselect(.in(alu_select_input),.clk(clk),.out(alu_select_output),.reset(reset));
 
 //3rd stage instantiated 
-execute_stage execute(.ir3_output(ir3_output),.pc3_output(pc3_output),.x3_output(x3_output),.y3_output(y3_output),.md3_output(md3_output),.pc4_output(pc4_output),.z4_output(z4_output),.z5_output(z5_output),.select_ir4(select_ir4),.select_pc4z4(select_pc4z4),.select_operand1(select_operand1),.select_operand2(select_operand2),.select_md4(select_md4),.clk(clk),.reset(reset),.ir4_input(ir4_input),.pc4_input(pc4_input),.z4_input(z4_input),.md4_input(md4_input),.alu_select_output(alu_select_output),.branch_control_input(branch_control_input),.select_z4(select_z4),.md4_output(md4_output),.select_pc4(select_pc4));
+execute_stage execute(.ir3_output(ir3_output),.pc3_output(pc3_output),.x3_output(x3_output),.y3_output(y3_output),.md3_output(md3_output),.pc4_output(pc4_output),.z4_output(z4_output),.z5_output(z5_output),.select_ir4(select_ir4),.select_pc4z4(select_pc4z4),.select_operand1(select_operand1),.select_operand2(select_operand2),.select_md4(select_md4),.clk(clk),.reset(reset),.ir4_input(ir4_input),.pc4_input(pc4_input),.z4_input(z4_input),.md4_input(md4_input),.alu_select_output(alu_select_output),.branch_control_input(branch_control_input),.ir4_output(ir4_output),.md4_output(md4_output));
 
 //dff for intermediate pipeline registers from execute stage
 dff ir4(.in(ir4_input),.clk(clk),.out(ir4_output),.reset(reset));
@@ -78,39 +75,24 @@ dff branch4(.in(branchaddress3_output),.clk(clk),.out(branchaddress),.reset(rese
 dff3 controlbranch(.in(branch_control_input),.clk(clk),.out(branch_control_output),.reset(reset));
 
 //4th stage instantiated
-memory_stage mem(.ir4_output(ir4_output),.pc4_output(pc4_output),.z4_output(z4_output),.md4_output(md4_output),.z5_output(z5_output),.read_data(read_data),.write_data(write_data),.select_z5(select_z5),.select_writedata(select_writedata),.ir5_input(ir5_input),.z5_input(z5_input));
+memory_stage mem(.clk(clk),.reset(reset),.ir4_output(ir4_output),.pc4_output(pc4_output),.z4_output(z4_output),.md4_output(md4_output),.z5_output(z5_output),.read_data(read_data),.write_data(write_data),.select_z5(select_z5),.select_writedata(select_writedata),.ir5_input(ir5_input),.z5_input(z5_input),.select_ir5(select_ir5));
 
 //dff for intermediate pipeline registers from 4th stage
 dff ir5(.in(ir5_input),.clk(clk),.out(ir5_output),.reset(reset));
 dff z5(.in(z5_input),.clk(clk),.out(z5_output),.reset(reset));
 
 //data memory instantiated
-datamemory data(.clk(clk),.reset(reset),.address(z4_input),.write_data(write_data),.read_data(read_data),.write_signal(data_write_signal));
+//datamemory data(.clk(clk),.reset(reset),.address(z4_input),.write_data(write_data),.read_data(read_data),.write_signal(data_write_signal));
 
 regfile registers(.r1_add(ir2_input[19:15]),.r2_add(ir2_input[24:20]),.write_add(ir5_output[11:7]),.z5_output(z5_output),.write_enable(reg_write_enable),.clk(clk),.reset(reset),.r1_value(r1_value),.r2_value(r2_value));
 
 //control module instantiation:1
 
-control control_part(.reset(reset),.ir2_output(ir2_output),.ir3_output(ir3_output),.ir4_output(ir4_output),.ir5_output(ir5_output),.select_pc(select_pc),.select_pc2(select_pc2),.select_ir2(select_ir2),.select_ir3(select_ir3),.select_ir4(select_ir4),.select_pc3(select_pc3),.select_x3(select_x3),.select_y3(select_y3),.select_md3(select_md3),.select_operand1(select_operand1),.select_operand2(select_operand2),.select_md4(select_md4),.select_datawrite(select_datawrite),.select_z5(select_z5),.reg_write_enable(reg_write_enable),.data_write_signal(data_write_signal),.branch_control_output(branch_control_output),.select_z4(select_z4),.select_pc4(select_pc4),.load_fifo_write_signal(load_fifo_write_signal),.store_fifo_write_signal(store_fifo_write_signal));
+control control_part(.reset(reset),.ir2_output(ir2_output),.ir3_output(ir3_output),.ir4_output(ir4_output),.ir5_output(ir5_output),.select_pc(select_pc),.select_pc2(select_pc2),.select_ir2(select_ir2),.select_ir3(select_ir3),.select_ir4(select_ir4),.select_pc3(select_pc3),.select_x3(select_x3),.select_y3(select_y3),.select_md3(select_md3),.select_operand1(select_operand1),.select_operand2(select_operand2),.select_md4(select_md4),.select_datawrite(select_datawrite),.select_z5(select_z5),.reg_write_enable(reg_write_enable),.data_write_signal(data_write_signal),.branch_control_output(branch_control_output),.select_ir5(select_ir5),.backpressureslave(backpressureslave),.a_ready(a_ready),.ir4_input(ir4_input));
 
-wire [21:0]temp1;
-assign temp1[21:15] = ir4_output[6:0];
-assign temp1[14:10] = ir4_output[11:7];
-assign temp1[9:0] = z4_input[9:0];
+assign read_data = d_channel[31:0];
 
-wire[53:0] temp2;
-assign temp2[53:47] = ir4_output[6:0];
-assign temp2[46:42] = 5'b00000;
-assign temp2[41:32] = z4_input[9:0];
-assign temp2[31:0] = write_data;
-
-combined2 tilelink(.clk(clk),.reset(reset),.load_fifo_write_signal(load_fifo_write_signal),.store_fifo_write_signal(store_fifo_write_signal),.load_fifo_write_data(temp1),.store_fifo_write_data(temp2));
-
-
-initial begin
-	//$monitor("%d",store_fifo_write_signal);
-end
-
+master_slave master_slave_instantiate(.clk(clk),.reset(reset),.ir34(ir4_input),.a_ready(a_ready),.d_ready(d_ready),.backpressureslave(backpressureslave),.z4_input(z4_input),.md4_input(md4_input),.d_channel(d_channel));
 
 //assign select_pc = 1;
 		//assign select_ir2 = 0;
@@ -191,7 +173,14 @@ $monitor("%b %d %d %d %d %d %d",z5_output,r1_value,r2_value,x3_output,y3_output,
 //#10  reset = 0;
 //		#200 $finish;
 //	end
-
+initial begin
+//$monitor("%d %d %d %d",ir2_input[19:15],ir2_input[24:20],r1_value,r2_value);
+//$monitor("%d %d",r1_value,r2_value);
+//$monitor("%d",select_md4);
+//	     $monitor("%b",read_data);
+//$monitor("%d",reg_write_enable);
+//$monitor("%b %b",ir5_input,z5_input);
+end
 endmodule
 
 
