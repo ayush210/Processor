@@ -1,28 +1,18 @@
-1 : lui r1 i1
-2 :	lui r2 i3
-3 :	lui r4 i5
-4 :	lui r5 i6
-5 :	sw r6 r7 i5
-6 :
-7 :
-8 :
-9 :
-10:
-11:
-12:
-13:
-14:
-15:
-16:
-17:
-18:
-19:
-20:
-21:
-22:
-23:
-24:
-25:
+1 : lui r1 i2
+2 : addi r2 r1 i2
+3 : addi r3 r2 i6
+4 : subi r4 r3 i2
+5 : lui r5 i1
+6 : addi r7 r5 i6
+7 : add r6 r5 r6
+8 : add r0 r2 r3
+9 : sub r8 r3 r1
+10: sw r1 r8 i0
+11: add r0 r1 r3
+12: add r6 r1 r2
+13: add r4 r1 r3
+14: add r0 r1 r2
+15: 
 26:
 27:
 28:
