@@ -5,20 +5,23 @@
 //branch address after stage 3 has to be added and connected to pc mux 
 //reset has to be added 
 // lui and auipc has to be considered seperately for hazards 
-module control(reset,ir2_output,ir3_output,ir4_output,ir5_output,branch_control_output,select_pc,select_pc2,select_ir2,select_ir3,select_ir4,select_pc3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_datawrite,select_z5,reg_write_enable,data_write_signal,select_z4,select_pc4);
+module control(reset,ir2_output,ir3_output,ir4_output,ir5_output,branch_control_output,select_pc,select_pc2,select_ir2,select_ir3,select_ir4,select_pc3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_datawrite,select_z5,reg_write_enable,data_write_signal,select_ir5,backpressureslave,a_ready,ir4_input);
+
+input[31:0] ir4_input;
+input a_ready;
+input backpressureslave;
 input branch_control_output;
 input[31:0] ir2_output,ir3_output,ir4_output,ir5_output; // instruction reg of each stage;
 output[1:0] select_pc,select_ir2,select_ir3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_z5;
 output select_pc2,select_pc3,select_datawrite,reg_write_enable,data_write_signal;
 output[1:0] select_ir4;
-output select_z4;
-output select_pc4;
-reg select_z4;
+output select_ir5;
 reg[1:0] select_pc,select_ir2,select_ir3,select_x3,select_y3,select_md3,select_operand1,select_operand2,select_md4,select_z5;
 reg select_pc2,select_pc3,select_datawrite,output_reg_enable,reg_write_enable,data_write_signal;
-input reset;
+reg select_ir5;
 reg[1:0] select_ir4;
-reg select_pc4;
+reg backpressure;
+input reset;
 always @(*)
 		begin
 if(reset==1)
@@ -26,10 +29,29 @@ if(reset==1)
 		select_pc = 2;
 		select_ir2 = 0;
 		select_pc2 = 0;
+		backpressure = 0;
 		end
 else
 		begin
-if((ir4_output[6:0]==7'b1100111)||(ir4_output[6:0]==7'b1101111)) //jump
+
+if(a_ready==0&&(ir4_input[6:0]==7'b0000011||ir4_input[6:0]==7'b0100011))
+begin
+	backpressure = 1;
+end
+else
+begin
+	backpressure = 0;
+end
+
+if(backpressureslave==1||backpressure==1)
+		begin
+			select_pc = 2;
+			select_pc2 = 1;
+			select_ir2 = 2;
+			select_ir3 = 2;
+			//select_pc3 = 1;
+		end
+else if((ir4_output[6:0]==7'b1100111)||(ir4_output[6:0]==7'b1101111)) //jump
 	begin
 		select_pc = 0;  //pc = jump add
 		select_ir2 = 1; //nop
@@ -60,7 +82,6 @@ else if(ir2_output[19:15] == ir3_output[11:7]&&(ir3_output[14:12] == 3'b010) && 
 		select_pc2 = 1; //pc2 = old pc2 stall
 		select_ir2 = 2; //stall 
 		select_ir3 = 1; //nop in stage 3
-		//select_z4 = 0;
 	end
 else if((ir2_output[19:15] == ir3_output[11:7])&&(ir3_output[6:0] == 7'b0000011) && (ir2_output[6:0] == 7'b1100111) && (ir3_output[14:12] == 3'b010) && (ir3_output[14:12] == 3'b000))   // Lw r’, imm(rs1)  Beq rs1,r’,imm
 	begin
@@ -121,7 +142,11 @@ else       // for all other instructions
 		end*/
 	
 		//control for x3
-if((ir2_output[6:0]==7'b0010111)||(ir2_output[6:0]==7'b1101111)) // pc relative addressing //auipc or jal
+if(backpressureslave==1||backpressure==1)
+		begin	
+			select_x3 = 2;
+		end
+else if((ir2_output[6:0]==7'b0010111)||(ir2_output[6:0]==7'b1101111)) // pc relative addressing //auipc or jal
 	begin
 		select_x3 = 1;
 	end
@@ -139,7 +164,11 @@ else
 	end
 
 	//control for y3
-if((ir2_output[6:0]==7'b0010011)||ir2_output[6:0]==7'b1100111||ir2_output[6:0]==7'b0110111||ir2_output[6:0]==7'b0010111||ir2_output[6:0]==7'b0000011)	//sign extended value jr/jalr/arithmetic imm //lui // auipc //lw
+if(backpressureslave==1||backpressure==1)			//back pressure from 4th stage to repeat whats already there
+	begin
+		select_y3 = 2;
+	end
+else if((ir2_output[6:0]==7'b0010011)||ir2_output[6:0]==7'b1100111||ir2_output[6:0]==7'b0110111||ir2_output[6:0]==7'b0010111||ir2_output[6:0]==7'b0000011)	//sign extended value jr/jalr/arithmetic imm //lui // auipc //lw
 	begin
 		select_y3 = 1;
 	end
@@ -147,18 +176,28 @@ else if((ir5_output[6:0]==7'b0000011||ir5_output[6:0]==7'b0110011||ir5_output[6:
 	begin					// lw beq //addi beq //add beq
 		select_y3 = 3;      //Lw rd, imm(rs1) Beq rs1,rd,imm   //forwaded from z5	
 	end
-
 else
 	begin
 		select_y3 = 0;
 	end
 
 //control for pc3
+if(backpressureslave==0&&backpressure==0)
+	begin
 	select_pc3 = 0;
+	end
+else
+	begin
+	select_pc3 = 1;
+	end
 
 
 	//control for md3
-if(ir2_output[24:20]==ir5_output[11:7]&&ir2_output[6:0]==7'b0100011&&ir5_output[6:0]==7'b0000011)
+if(backpressureslave==1||backpressure==1)       //back pressure from 4th stage to repeat whats already there
+	begin
+		select_md3 = 2;
+	end
+else if(ir2_output[24:20]==ir5_output[11:7]&&ir2_output[6:0]==7'b0100011&&ir5_output[6:0]==7'b0000011)
 	begin	
 		select_md3 = 1;
 	end
@@ -205,7 +244,11 @@ else
 	end
 
 //control for md4
-if((ir5_output[6:0]==7'b0000011)||(ir5_output[6:0]==7'b0110011)||(ir5_output[6:0]==7'b0010011)&&(ir3_output[6:0]==7'b0100011)&&(ir5_output[11:7]==ir3_output[24:20])) // Lw rd,imm1 Sw rd,imm2  //Add rd,r1,r2 / Addi  Sw rd,imm //forward from z5
+if(backpressureslave==1||backpressure==1)
+		begin
+		select_md4 = 3;
+		end
+else if((ir5_output[6:0]==7'b0000011)||(ir5_output[6:0]==7'b0110011)||(ir5_output[6:0]==7'b0010011)&&(ir3_output[6:0]==7'b0100011)&&(ir5_output[11:7]==ir3_output[24:20])) // Lw rd,imm1 Sw rd,imm2  //Add rd,r1,r2 / Addi  Sw rd,imm //forward from z5
 	begin
 		select_md4 = 1;
 	end
@@ -221,10 +264,14 @@ else
 
 	// **stage 4th controls 
 	//control for ir4	
-	if(ir4_output[6:0] == 7'b1100011 && branch_control_output == 1)
+	if(ir4_output[6:0] == 7'b1100011 && branch_control_output == 1) //for stalling 
 	begin
 	select_ir4 = 1;
 	end
+	else if(backpressureslave==1||backpressure==1)
+		begin
+			select_ir4 = 2;
+		end
 	else
 	begin
 	select_ir4 = 0;
@@ -272,13 +319,17 @@ else
 	begin
 		reg_write_enable = 0;
 	end
+
+if(backpressureslave==0&&backpressure==0)
+		begin
+			select_ir5 = 0;
+		end
+else							//nop to 5th stage if backpressure = 1
+	begin
+			select_ir5 = 1;
+	end
+
+
 end
-
-//control for z4 mux
-select_z4 = 0;
-
-//control for pc4
-select_pc4 = 0;
-
 end
 endmodule

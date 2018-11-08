@@ -17,17 +17,20 @@ reg clk;     // clk signal
 wire[31:0] pc;   //program counter 
 reg[31:0] instruction;         //instruction
 reg[0:31] memory[0:40]; //memory registers
+reg a_ready;
+reg d_ready;
 always @(*)             //generating clock signal       
 		begin
 #5 clk<=~clk;
 		end 
-processor proc(.clk(clk),.reset(reset),.pc(pc),.instruction(instruction)); //instantiating processor module
+processor proc(.clk(clk),.reset(reset),.pc(pc),.instruction(instruction),.a_ready(a_ready),.d_ready(d_ready)); //instantiating processor module
 initial begin
 clk = 0;reset = 1;
+a_ready = 1; d_ready = 1;
 $readmemb("machinecode.txt",memory);     //reading instructions from memory
 #5 
 #10 reset = 0;
-#200 $finish;
+#2000 $finish;
 end
 always @(posedge clk)
 		begin
